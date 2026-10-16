@@ -61,6 +61,7 @@ header .wrap{display:flex;align-items:center;gap:16px;padding-block:12px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
 .art{aspect-ratio:4/3;max-width:100%;display:grid;place-items:center;position:relative}
 .art svg{width:46%;height:auto;color:var(--ink)}
+.art .photo{width:100%;height:100%;object-fit:cover}
 .badge{position:absolute;top:12px;left:12px;background:var(--tag);color:var(--tag-ink);font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;border-radius:6px;padding:3px 8px}
 .info{padding:14px 16px 16px;display:flex;flex-direction:column;gap:6px;flex:1}
 .info h3{font-size:16px;font-weight:600;margin:0}
@@ -72,6 +73,7 @@ header .wrap{display:flex;align-items:center;gap:16px;padding-block:12px}
 .price s{color:var(--muted);font-size:13px;margin-left:6px}
 .add{background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;padding:8px 14px;font-weight:600;font-size:14px}
 .add.done{background:var(--good);color:#fff}
+.add:disabled{background:var(--line);color:var(--muted);cursor:not-allowed}
 
 footer{border-top:1px solid var(--line);color:var(--muted);font-size:13px}
 footer .wrap{display:flex;flex-wrap:wrap;gap:12px 32px;justify-content:space-between;padding-block:24px}
@@ -92,6 +94,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:12px 32px;justify-content:space-bet
 .line{display:grid;grid-template-columns:56px 1fr auto;gap:12px;align-items:center}
 .thumb{width:56px;height:56px;border-radius:10px;display:grid;place-items:center}
 .thumb svg{width:60%;color:var(--ink)}
+.thumb{overflow:hidden}.thumb .photo{width:100%;height:100%;object-fit:cover}
 .line h4{margin:0;font-size:14px;font-weight:600}
 .qty{display:flex;align-items:center;gap:6px;margin-top:4px}
 .qty button{width:26px;height:26px;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:6px}
@@ -114,7 +117,7 @@ input{font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:
 @media (max-width:760px){.hero{grid-template-columns:1fr;padding-block:28px 20px}}
 </style>
 
-<div class="demo">Launching soon. Browse the list now; checkout opens shortly.</div>
+<div class="demo" id="banner">Launching soon. Browse the list now; checkout opens shortly.</div>
 <header><div class="wrap">
   <div class="logo"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" fill="var(--accent)"/><path d="M8 8h12M14 8v12" stroke="var(--accent-ink)" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Ted’s Corner</div>
   <div class="spacer"></div>
@@ -166,50 +169,57 @@ const ICONS={
  cable:'<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><rect x="8" y="22" width="14" height="20" rx="3"/><rect x="42" y="22" width="14" height="20" rx="3"/><path d="M22 32h4c6 0 6-14 12-14M38 46c-6 0-6-14-12-14"/></svg>',
  pillow:'<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"><path d="M10 20c0-6 6-8 22-8s22 2 22 8v24c0 6-6 8-22 8s-22-2-22-8z"/><path d="M20 32h24"/></svg>'
 };
-const PRODUCTS=[
- {id:1,name:"Sunset Projection Lamp",cat:"Home",icon:"lamp",tile:"--tile2",price:29.99,badge:"New",desc:"Casts a warm golden-hour glow on any wall. USB-C powered, 180° head."},
- {id:2,name:"Portable Juice Blender",cat:"Kitchen",icon:"blender",tile:"--tile3",price:34.99,desc:"380 ml cup, rechargeable, blends frozen fruit in about 30 seconds."},
- {id:3,name:"MagSafe Desk Stand",cat:"Tech",icon:"stand",tile:"--tile1",price:24.99,badge:"Trending",desc:"Aluminium stand with a strong magnet ring. Rotates portrait to landscape."},
- {id:4,name:"Smart LED Strip, 5 m",cat:"Home",icon:"led",tile:"--tile4",price:27.99,desc:"App and voice control, music sync, cut-to-length adhesive strip."},
- {id:5,name:"Self-Cleaning Water Bottle",cat:"Outdoor",icon:"bottle",tile:"--tile1",price:32.99,desc:"Insulated steel, 500 ml. UV cap runs a cleaning cycle every 4 hours."},
- {id:6,name:"Pet Hair Remover Roller",cat:"Home",icon:"brush",tile:"--tile3",price:16.99,badge:"Under $20",desc:"Reusable, no sticky sheets. Works on sofas, car seats and bedding."},
- {id:7,name:"3-in-1 Braided Charging Cable",cat:"Tech",icon:"cable",tile:"--tile2",price:14.99,desc:"USB-C, Lightning and Micro-USB tips on one 1.2 m nylon cable."},
- {id:8,name:"Memory Foam Travel Pillow",cat:"Outdoor",icon:"pillow",tile:"--tile4",price:26.99,desc:"Rolls into its own pouch. Washable cover, adjustable chin strap."}
-];
+// Set this to your Cloudflare Worker URL (e.g. "https://teds-corner-api.yourname.workers.dev") to turn on
+// live AliExpress products and real checkout. Left empty, the page shows the list below with "launching soon".
+const API_BASE="";
+
+let PRODUCTS=[
+ {id:"sunset-lamp",name:"Sunset Projection Lamp",cat:"Home",icon:"lamp",tile:"--tile2",price:29.99,badge:"New",desc:"Casts a warm golden-hour glow on any wall. USB-C powered, 180° head."},
+ {id:"juice-blender",name:"Portable Juice Blender",cat:"Kitchen",icon:"blender",tile:"--tile3",price:34.99,desc:"380 ml cup, rechargeable, blends frozen fruit in about 30 seconds."},
+ {id:"magsafe-stand",name:"MagSafe Desk Stand",cat:"Tech",icon:"stand",tile:"--tile1",price:24.99,badge:"Trending",desc:"Aluminium stand with a strong magnet ring. Rotates portrait to landscape."},
+ {id:"led-strip",name:"Smart LED Strip, 5 m",cat:"Home",icon:"led",tile:"--tile4",price:27.99,desc:"App and voice control, music sync, cut-to-length adhesive strip."},
+ {id:"water-bottle",name:"Self-Cleaning Water Bottle",cat:"Outdoor",icon:"bottle",tile:"--tile1",price:32.99,desc:"Insulated steel, 500 ml. UV cap runs a cleaning cycle every 4 hours."},
+ {id:"pet-roller",name:"Pet Hair Remover Roller",cat:"Home",icon:"brush",tile:"--tile3",price:16.99,badge:"Under $20",desc:"Reusable, no sticky sheets. Works on sofas, car seats and bedding."},
+ {id:"charging-cable",name:"3-in-1 Braided Charging Cable",cat:"Tech",icon:"cable",tile:"--tile2",price:14.99,desc:"USB-C, Lightning and Micro-USB tips on one 1.2 m nylon cable."},
+ {id:"travel-pillow",name:"Memory Foam Travel Pillow",cat:"Outdoor",icon:"pillow",tile:"--tile4",price:26.99,desc:"Rolls into its own pouch. Washable cover, adjustable chin strap."}
+].map(p=>({...p,available:true}));
 const FREE_SHIP=50, SHIP_FEE=6.99;
 const fmt=n=>"$"+n.toFixed(2);
-let filter="All", cart={};
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let filter="All", cart={}, live=false;
 try{cart=JSON.parse(localStorage.getItem("tc-cart")||"{}")}catch(e){cart={}}
 const save=()=>{try{localStorage.setItem("tc-cart",JSON.stringify(cart))}catch(e){}};
 const $=id=>document.getElementById(id);
+const find=id=>PRODUCTS.find(x=>x.id===id);
+const visual=(p,cls)=>p.image?`<img class="${cls}" src="${esc(p.image)}" alt="${esc(p.name)}" loading="lazy">`:(ICONS[p.icon]||ICONS.pillow);
 
-$("ticker").innerHTML=Array(2).fill(PRODUCTS.map(p=>`<span><b>${p.name}</b> · ${fmt(p.price)}</span>`).join("")).join("");
-
+function renderTicker(){$("ticker").innerHTML=Array(2).fill(PRODUCTS.map(p=>`<span><b>${esc(p.name)}</b> · ${fmt(p.price)}</span>`).join("")).join("")}
 function renderFilters(){
   const cats=["All",...new Set(PRODUCTS.map(p=>p.cat))];
-  $("filters").innerHTML=cats.map(c=>`<button class="chip" aria-pressed="${c===filter}" data-c="${c}">${c}</button>`).join("");
+  $("filters").innerHTML=cats.map(c=>`<button class="chip" aria-pressed="${c===filter}" data-c="${esc(c)}">${esc(c)}</button>`).join("");
 }
 function renderGrid(){
   const list=PRODUCTS.filter(p=>filter==="All"||p.cat===filter);
   $("grid").innerHTML=list.map(p=>`
   <article class="card">
-    <div class="art" style="background:var(${p.tile})">${p.badge?`<span class="badge">${p.badge}</span>`:""}${ICONS[p.icon]}</div>
+    <div class="art" style="background:var(${p.tile})">${p.badge?`<span class="badge">${esc(p.badge)}</span>`:""}${visual(p,"photo")}</div>
     <div class="info">
-      <div class="meta"><span>${p.cat}</span><span>Ships in 7–12 days</span></div>
-      <h3>${p.name}</h3>
-      <p>${p.desc}</p>
-      <div class="buy"><span class="price">${fmt(p.price)}${p.was?`<s>${fmt(p.was)}</s>`:""}</span>
-      <button class="add" data-add="${p.id}">Add to cart</button></div>
+      <div class="meta"><span>${esc(p.cat)}</span><span>Ships in 7–12 days</span></div>
+      <h3>${esc(p.name)}</h3>
+      <p>${esc(p.desc)}</p>
+      <div class="buy"><span class="price">${fmt(p.price)}</span>
+      ${p.available?`<button class="add" data-add="${esc(p.id)}">Add to cart</button>`:`<button class="add" disabled>Sold out</button>`}</div>
     </div>
   </article>`).join("");
 }
 function totals(){
   let items=0,sub=0;
-  for(const [id,q] of Object.entries(cart)){const p=PRODUCTS.find(x=>x.id==id);if(p){items+=q;sub+=p.price*q}}
+  for(const [id,q] of Object.entries(cart)){const p=find(id);if(p){items+=q;sub+=p.price*q}}
   const ship=sub===0||sub>=FREE_SHIP?0:SHIP_FEE;
   return{items,sub,ship,total:sub+ship};
 }
-function renderCart(){
+function renderCart(msg){
+  for(const id of Object.keys(cart)) if(!find(id)) delete cart[id];
   const t=totals();
   $("count").textContent=t.items;
   const ids=Object.keys(cart);
@@ -218,30 +228,29 @@ function renderCart(){
   }else{
     const left=Math.max(0,FREE_SHIP-t.sub);
     $("dBody").innerHTML=`<div class="ship">${left>0?`Add <b>${fmt(left)}</b> more for free shipping.`:`<b style="color:var(--good)">You've unlocked free shipping.</b>`}<div class="bar"><i style="width:${Math.min(100,t.sub/FREE_SHIP*100)}%"></i></div></div>`+
-    ids.map(id=>{const p=PRODUCTS.find(x=>x.id==id);return `
-      <div class="line"><div class="thumb" style="background:var(${p.tile})">${ICONS[p.icon]}</div>
-      <div><h4>${p.name}</h4><div class="qty"><button data-dec="${id}" aria-label="Decrease">−</button><span>${cart[id]}</span><button data-inc="${id}" aria-label="Increase">+</button></div></div>
+    ids.map(id=>{const p=find(id);return `
+      <div class="line"><div class="thumb" style="background:var(${p.tile})">${visual(p,"photo")}</div>
+      <div><h4>${esc(p.name)}</h4><div class="qty"><button data-dec="${esc(id)}" aria-label="Decrease">−</button><span>${cart[id]}</span><button data-inc="${esc(id)}" aria-label="Increase">+</button></div></div>
       <span class="price">${fmt(p.price*cart[id])}</span></div>`}).join("");
   }
   $("dFoot").innerHTML=`
     <div class="row"><span>Subtotal</span><span>${fmt(t.sub)}</span></div>
     <div class="row"><span>Shipping</span><span>${t.ship?fmt(t.ship):(t.sub?"Free":"—")}</span></div>
     <div class="row total"><span>Total</span><span>${fmt(t.total)}</span></div>
-    <button class="checkout" id="toCheckout" ${t.items?"":"disabled"}>Checkout</button>
-    <p class="note" id="soon" hidden>Checkout opens soon. Your cart is saved on this device, so it will be here when we launch.</p>`;
+    <button class="checkout" id="toCheckout" ${t.items?"":"disabled"}>${live?"Checkout securely":"Checkout"}</button>
+    <p class="note" id="soon" ${msg?"":"hidden"}>${esc(msg||"Checkout opens soon. Your cart is saved on this device, so it will be here when we launch.")}</p>`;
   save();
 }
-function renderCheckout(){
-  const t=totals();
-  $("dBody").innerHTML=`<form id="coForm">
-    <label for="co-name">Full name<input id="co-name" required autocomplete="name" value="Alex Chen"></label>
-    <label for="co-email">Email<input id="co-email" type="email" required autocomplete="email" value="alex@example.com"></label>
-    <label for="co-addr">Street address<input id="co-addr" required autocomplete="street-address" value="120 King St W"></label>
-    <label for="co-city">City and postal code<input id="co-city" required value="Toronto, M5H 1J9"></label>
-    <p class="note">Example details are pre-filled. This is a demo, so no card is collected.</p>
-  </form>`;
-  $("dFoot").innerHTML=`<div class="row total"><span>Total</span><span>${fmt(t.total)}</span></div>
-    <button class="checkout" type="submit" form="coForm">Place order</button>`;
+async function checkout(b){
+  if(!live){$("soon").hidden=false;b.disabled=true;b.textContent="Launching soon";return}
+  b.disabled=true;b.textContent="Opening secure checkout…";
+  try{
+    const res=await fetch(API_BASE+"/api/checkout",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({items:Object.entries(cart).map(([id,quantity])=>({id,quantity}))})});
+    const data=await res.json();
+    if(!res.ok||!data.url) throw new Error(data.error||"Checkout couldn't start.");
+    location.href=data.url;
+  }catch(err){renderCart(err.message+" Please try again in a moment.")}
 }
 function openCart(){$("drawer").classList.add("open");$("drawer").setAttribute("aria-hidden","false");$("scrim").hidden=false;renderCart()}
 function closeCart(){$("drawer").classList.remove("open");$("drawer").setAttribute("aria-hidden","true");$("scrim").hidden=true}
@@ -250,23 +259,35 @@ document.addEventListener("click",e=>{
   const b=e.target.closest("button");if(!b)return;
   if(b.dataset.c){filter=b.dataset.c;renderFilters();renderGrid()}
   else if(b.dataset.add){const id=b.dataset.add;cart[id]=(cart[id]||0)+1;renderCart();b.textContent="Added";b.classList.add("done");setTimeout(()=>{b.textContent="Add to cart";b.classList.remove("done")},1200)}
-  else if(b.dataset.inc){cart[b.dataset.inc]++;renderCart()}
+  else if(b.dataset.inc){cart[b.dataset.inc]=Math.min(10,cart[b.dataset.inc]+1);renderCart()}
   else if(b.dataset.dec){const id=b.dataset.dec;cart[id]--;if(cart[id]<=0)delete cart[id];renderCart()}
   else if(b.id==="openCart")openCart();
-  else if(b.id==="closeCart")closeCart();
-  else if(b.id==="toCheckout"){$("soon").hidden=false;b.disabled=true;b.textContent="Launching soon"}
+  else if(b.id==="closeCart"){closeCart()}
+  else if(b.id==="toCheckout")checkout(b);
 });
 $("scrim").addEventListener("click",closeCart);
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeCart()});
-document.addEventListener("submit",e=>{
-  e.preventDefault();
-  const name=$("co-name").value.split(" ")[0]||"there";
-  const num="TC-"+Math.floor(100000+Math.random()*900000);
-  cart={};save();
-  $("count").textContent=0;
-  $("dBody").innerHTML=`<div class="ok"><b>Order placed (demo)</b>Thanks, ${name}. Order ${num} would now go to your supplier for fulfilment, and a tracking email would follow within 2–3 business days.</div>`;
-  $("dFoot").innerHTML=`<button class="checkout" id="closeCart">Keep shopping</button>`;
-});
 
-renderFilters();renderGrid();renderCart();
+function renderAll(){renderTicker();renderFilters();renderGrid();renderCart()}
+
+(async function init(){
+  let order=null;
+  try{order=new URLSearchParams(location.search).get("order")}catch(e){}
+  if(order==="success"){
+    cart={};save();
+    $("banner").textContent="Thanks for your order! A receipt is on its way to your email, and tracking follows in 2–3 business days.";
+  }
+  renderAll();
+  if(!API_BASE) return;
+  try{
+    const res=await fetch(API_BASE+"/api/products");
+    if(!res.ok) throw new Error();
+    const list=await res.json();
+    const tiles=["--tile1","--tile2","--tile3","--tile4"];
+    PRODUCTS=list.map((p,i)=>({...p,cat:p.category,tile:find(p.id)?.tile||tiles[i%4],icon:find(p.id)?.icon}));
+    live=true;
+    $("banner").textContent=order==="success"?$("banner").textContent:"Free tracked shipping across Canada on orders over $50.";
+    renderAll();
+  }catch(e){/* keep the built-in list and launching-soon checkout */}
+})();
 </script>

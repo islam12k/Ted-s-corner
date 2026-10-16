@@ -1,0 +1,17 @@
+name = "teds-corner-api"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+SITE_URL = "https://tahsin12232334.online"
+AE_AUTO_PAY = "false"          # "true" asks AliExpress to charge your saved payment method automatically
+STRIPE_AUTOMATIC_TAX = "false" # "true" once Stripe Tax is set up for GST/HST
+
+# Create the store with:  npx wrangler kv namespace create STORE
+# then paste the id it prints below.
+[[kv_namespaces]]
+binding = "STORE"
+id = "PASTE_KV_NAMESPACE_ID_HERE"
+
+# Secrets (never put these in this file). Set each with:  npx wrangler secret put NAME
+#   AE_APP_KEY, AE_APP_SECRET, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, ADMIN_KEY
